@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Double Check</title>
+    <link rel="icon" type="image/png" href="img/check.png">
+
+    <style>
+        body {
+            display: flex;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+
+        .container {
+            display: flex;
+            width: 100%;
+            height: 100vh;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .textarea-container,
+        .panel {
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .textarea-container {
+            width: 70%;
+            height: 100%;
+            background-color: #E1B16A;
+        }
+
+        .panel {
+            width: 30%;
+            background-color: #444C5C;
+            border-left: 1px solid #ccc;
+            height: 100%;
+            overflow: auto;
+        }
+
+        textarea {
+            width: 100%;
+            height: 50%;
+            box-sizing: border-box;
+            font-family: monospace;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+
+        .output {
+            width: 100%;
+            height: 48%;
+            box-sizing: border-box;
+            font-family: monospace;
+            padding: 10px;
+            border: 1px solid #ccc;
+            overflow: auto;
+            line-height: 1.2;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+        }
+
+        .input-field {
+            margin-bottom: 10px;
+        }
+
+        .input-field label {
+            display: block;
+            margin-bottom: 5px;
+            color: #ffffff;
+        }
+
+        .input-field input,
+        .input-field textarea {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+
+        .highlight-green {
+            background-color: #a0e9b1;
+            border: 1px solid #265c00;
+            border-radius: 4px;
+            padding: 0 4px;
+        }
+
+        .highlight-red {
+            background-color: #fec4c8;
+            border: 1px solid #AC171C;
+            border-radius: 4px;
+            padding: 0 4px;
+            cursor: pointer;
+        }
+
+        #total-mistakes {
+            margin-top: 10px;
+            font-weight: bold;
+            color: #ffffff;
+        }
+
+        .variable-list {
+            margin-top: 20px;
+        }
+
+        .variable-item {
+            display: inline-block;
+            background-color: #EBD2CD;
+            border: 3px solid #EBD2CD;
+            padding: 4px 10px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            position: relative;
+        }
+        .variable-item:hover {
+            background-color: #ffa795;
+            border: 3px solid #B53543;
+        }
+
+        .copied-tooltip {
+            position: absolute;
+            background-color: green;
+            color: white;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-size: 12px;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        .copied-tooltip.show {
+            opacity: 1;
+        }
+
+        .checkbox {
+            color: #fff;
+        }
+
+        .checkbox>input {
+            width: auto;
+            accent-color: #ce5a57;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #78A5A3;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #5E8C8A;
+        }
+
+        textarea, .output {
+            /* Устанавливаем spellcheck для textarea и output */
+            spellcheck: false;
+        }
+
+        textarea:focus, .output:focus {
+            outline: none; /* Убираем обводку при фокусе */
+        }
+
+        /* Применяем стили, если нет других активных ошибок */
+        textarea[data-spellcheck="false"], .output[data-spellcheck="false"] {
+            background-color: #fff; /* Цвет фона textarea */
+            color: #000; /* Цвет текста в textarea */
+        }
+
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="textarea-container">
+            <textarea id="html-code" placeholder="Вставьте сюда HTML код страницы..."></textarea>
+            <div id="output" class="output"></div>
+        </div>
+        <div class="panel">
+            <div class="input-field checkbox">
+                <input type="checkbox" id="mode" onclick="highlightText()" checked> html mode
+            </div>
+            <div class="input-field">
+                <label for="variables">Правильные переменные (в столбик, без скобок):</label>
+                <textarea id="variables" placeholder="variable1\variable2\n..."></textarea>
+            </div>
+            <div class="input-field">
+                <label for="start-date">Дата начала:</label>
+                <input type="text" id="start-date" placeholder="08.07.2024, 00:00">
+            </div>
+            <div class="input-field">
+                <label for="end-date">Дата конца:</label>
+                <input type="text" id="end-date" placeholder="14.07.2024, 23:59">
+            </div>
+            <div class="input-field">
+                <label for="numbers">Верные значения:</label>
+                <textarea id="numbers" placeholder="в столбик или через слеш /"></textarea>
+            </div>
+            <div class="input-field">
+                <label for="errors">Ошибочные значения:</label>
+                <textarea id="errors" placeholder="в столбик или через слеш /"></textarea>
+            </div>
+            <button onclick="highlightText()">Проверить</button>
+            <div id="total-mistakes">Total mistakes: 0</div>
+            <div id="variable-list" class="variable-list"></div>
+            <div class="input-field checkbox">
+                <input type="checkbox" id="toggle-correct" onclick="toggleCorrectHighlights()" checked> active green
+            </div>
+        </div>
+    </div>
+    <script>
+let elementCounter = 0;
+let elementMap = {};
+
+function highlightText() {
+    const htmlCode = document.getElementById('html-code').value;
+    const variablesInput = document.getElementById('variables').value;
+    const startDateInput = document.getElementById('start-date').value;
+    const endDateInput = document.getElementById('end-date').value;
+    const numbersInput = document.getElementById('numbers').value;
+    const errorInput = document.getElementById('errors').value;
+    const isHtmlMode = document.getElementById('mode').checked;
+    const showCorrectHighlights = document.getElementById('toggle-correct').checked;
+
+    let highlightedText = htmlCode;
+    elementCounter = 0;
+    elementMap = {};
+    let mistakeCounter = 0;
+
+    const variableList = document.getElementById('variable-list');
+    variableList.innerHTML = '';
+
+    if (variablesInput.trim()) {
+        const variables = variablesInput.split('\n').map(v => v.trim()).filter(v => v);
+        variables.forEach(variable => {
+            const regex = new RegExp(`\\[${escapeRegExp(variable)}\\]`, 'g');
+            highlightedText = highlightedText.replace(regex, `<span class="highlight-green" id="element-${elementCounter}">[${variable}]</span>`);
+            elementCounter++;
+
+            const variableItem = document.createElement('div');
+            variableItem.className = 'variable-item';
+            variableItem.textContent = `${variable}`;
+            variableItem.onclick = (event) => copyToClipboard(variableItem.textContent, event);
+            variableList.appendChild(variableItem);
+        });
+
+        const variableRegex = /\[([^\]]+)\]/g;
+        highlightedText = highlightedText.replace(variableRegex, (match, p1) => {
+            if (variables.includes(p1)) {
+                return match;
+            } else {
+                const id = `element-${elementCounter}`;
+                if (!elementMap[p1]) elementMap[p1] = [];
+                elementMap[p1].push(id);
+                mistakeCounter++;
+                return `<span class="highlight-red" id="${id}" onclick="scrollToText('${p1}', ${elementMap[p1].length - 1})">[${p1}]</span>`;
+            }
+        });
+    }
+
+    if (startDateInput.trim() || endDateInput.trim()) {
+        const inputStartDates = new Set();
+        const inputStartTimes = new Set();
+        const inputEndDates = new Set();
+        const inputEndTimes = new Set();
+
+        function addDateTimeToSet(dateTimeStr, isStartDate) {
+            const dateRegex = /\d{2}\.\d{2}\.\d{4}/g;
+            const timeRegex = /\d{2}:\d{2}/g;
+
+            const dates = dateTimeStr.match(dateRegex);
+            const times = dateTimeStr.match(timeRegex);
+
+            if (dates) {
+                dates.forEach(date => isStartDate ? inputStartDates.add(date) : inputEndDates.add(date));
+            }
+
+            if (times) {
+                times.forEach(time => isStartDate ? inputStartTimes.add(time) : inputEndTimes.add(time));
+            }
+        }
+
+        if (startDateInput) {
+            addDateTimeToSet(startDateInput, true);
+        }
+
+        if (endDateInput) {
+            addDateTimeToSet(endDateInput, false);
+        }
+
+        console.log("Start dates:", inputStartDates);
+        console.log("Start times:", inputStartTimes);
+        console.log("End dates:", inputEndDates);
+        console.log("End times:", inputEndTimes);
+
+        const dateRegex = /\d{2}\.\d{2}\.\d{4}/g;
+        const timeRegex = /\d{2}:\d{2}/g;
+
+        let dateMatchCounter = 0;
+        let timeMatchCounter = 0;
+
+        highlightedText = highlightedText.replace(dateRegex, (date, offset, string) => {
+            const id = `element-${elementCounter}`;
+            elementCounter++;
+            dateMatchCounter++;
+            let isStartDate = dateMatchCounter % 2 !== 0; // Нечетные вхождения - start date, четные - end date
+
+            console.log(`Checking date: ${date} at index: ${offset}`);
+            console.log(`Is start date: ${isStartDate}`);
+
+            if ((isStartDate && inputStartDates.has(date)) || (!isStartDate && inputEndDates.has(date))) {
+                return `<span class="highlight-green" id="${id}">${date}</span>`;
+            } else {
+                if (!elementMap[date]) elementMap[date] = [];
+                elementMap[date].push(id);
+                mistakeCounter++;
+                return `<span class="highlight-red" id="${id}" onclick="scrollToText('${date}', ${elementMap[date].length - 1})">${date}</span>`;
+            }
+        });
+
+        highlightedText = highlightedText.replace(timeRegex, (time, offset, string) => {
+            const id = `element-${elementCounter}`;
+            elementCounter++;
+            timeMatchCounter++;
+            let isStartTime = timeMatchCounter % 2 !== 0; // Нечетные вхождения - start time, четные - end time
+
+            console.log(`Checking time: ${time} at index: ${offset}`);
+            console.log(`Is start time: ${isStartTime}`);
+
+            if ((isStartTime && inputStartTimes.has(time)) || (!isStartTime && inputEndTimes.has(time))) {
+                return `<span class="highlight-green" id="${id}">${time}</span>`;
+            } else {
+                if (!elementMap[time]) elementMap[time] = [];
+                elementMap[time].push(id);
+                mistakeCounter++;
+                return `<span class="highlight-red" id="${id}" onclick="scrollToText('${time}', ${elementMap[time].length - 1}, ${!isStartTime})">${time}</span>`;
+            }
+        });
+    }
+
+    if (numbersInput.trim()) {
+        const numbers = numbersInput.split(/\n|\/+/).map(n => n.trim());
+        numbers.forEach(number => {
+            const numberRegex = new RegExp(escapeRegExp(number), 'g');
+            const id = `element-${elementCounter}`;
+            highlightedText = highlightedText.replace(numberRegex, `<span class="highlight-green" id="${id}">${number}</span>`);
+            elementCounter++;
+        });
+    }
+
+    // Highlight errors in red
+    if (errorInput.trim()) {
+        const errors = errorInput.split(/\n|\/+/).map(e => e.trim()).filter(e => e);
+        errors.forEach(error => {
+            const errorRegex = new RegExp(escapeRegExp(error), 'g');
+            const id = `element-${elementCounter}`;
+            const oldText = highlightedText;
+            highlightedText = highlightedText.replace(errorRegex, `<span class="highlight-red" id="${id}" onclick="scrollToText('${error}', ${elementMap[error] ? elementMap[error].length - 1 : 0})">${error}</span>`);
+            if (highlightedText !== oldText) {
+                mistakeCounter++;
+            }
+            elementCounter++;
+        });
+    }
+
+    if (!isHtmlMode) {
+        highlightedText = highlightedText.replace(/\n/g, '<br>');
+    }
+
+    document.getElementById('output').innerHTML = highlightedText;
+    document.getElementById('total-mistakes').textContent = `Total mistakes: ${mistakeCounter}`;
+
+    // Hide correct highlights if toggle is off
+    if (!showCorrectHighlights) {
+        document.querySelectorAll('.highlight-green').forEach(el => {
+            el.classList.remove('highlight-green');
+        });
+    }
+}
+
+function toggleCorrectHighlights() {
+    const showCorrectHighlights = document.getElementById('toggle-correct').checked;
+    if (showCorrectHighlights) {
+        highlightText();
+    } else {
+        document.querySelectorAll('.highlight-green').forEach(el => {
+            el.classList.remove('highlight-green');
+        });
+    }
+}
+// Отключаем проверку орфографии
+    const outputElement = document.getElementById('output');
+    outputElement.setAttribute('spellcheck', 'false');
+    outputElement.dataset.spellcheck = 'false';
+
+    // Убираем подсветку орфографических ошибок в textarea
+    document.getElementById('html-code').setAttribute('spellcheck', 'false');
+
+
+function scrollToText(text, occurrenceIndex, isEnd) {
+    const textarea = document.getElementById('html-code');
+    const allOccurrences = getAllOccurrences(textarea.value, text);
+    const index = allOccurrences[occurrenceIndex + (isEnd ? 1 : 0)];
+    console.log("Scrolling to element:", occurrenceIndex, "with text:", text, "at index:", index);
+    if (index !== -1) {
+        textarea.focus();
+        textarea.setSelectionRange(index, index + text.length);
+        textarea.scrollTop = textarea.scrollHeight * (index / textarea.value.length);
+        console.log("New scroll position:", textarea.scrollTop);
+    } else {
+        console.log("Text not found:", text);
+    }
+}
+
+function getAllOccurrences(source, search) {
+    let result = [];
+    let index = source.indexOf(search);
+    while (index !== -1) {
+        result.push(index);
+        index = source.indexOf(search, index + 1);
+    }
+    return result;
+}
+
+function copyToClipboard(text, event) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    // Ensure spellcheck is disabled
+    textarea.setAttribute('spellcheck', 'false');
+    textarea.style.position = 'fixed'; // Prevent scrolling to bottom of page in MS Edge
+    textarea.style.opacity = '0'; // Hide the textarea to prevent flashing effect
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+
+    const tooltip = document.createElement('div');
+    tooltip.className = 'copied-tooltip';
+    tooltip.textContent = 'Copied';
+    event.target.appendChild(tooltip);
+
+    setTimeout(() => {
+        tooltip.classList.add('show');
+        setTimeout(() => {
+            tooltip.classList.remove('show');
+            setTimeout(() => {
+                event.target.removeChild(tooltip);
+            }, 300);
+        }, 1000);
+    }, 10);
+}
+
+function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+</script>
+
+</script>
+
+
+
+</body>
+
+</html>
